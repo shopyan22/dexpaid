@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dexpaid Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .reset-button {
+            background-color: #f44336; /* Red */
+            color: white;
+        }
+        .reset-button:hover {
+            background-color: #e53935;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .result p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .data-item {
+            margin-bottom: 20px;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #ccc;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Dexpaid Checker</h2>
+        <label for="pairInput">Enter Pair:</label>
+        <input type="text" id="pairInput" placeholder="Example: 2gFAzXTF6je8JGiXG5M7TCmAndkLTLYWiBxEDGAZpump">
+        <div>
+            <button onclick="fetchData()">Get Data</button>
+            <button class="reset-button" onclick="resetData()">Reset</button>
+        </div>
+        
+        <div class="result" id="result">
+            <!-- Results will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        function fetchData() {
+            const pair = document.getElementById('pairInput').value.trim();
+            if (!pair) {
+                alert('Please enter a pair first!');
+                return;
+            }
+
+            // Construct the API URL with the entered pair
+            const apiUrl = `https://api.dexscreener.com/orders/v1/solana/${pair}`;
+
+            // Fetch data from the API
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        document.getElementById('result').innerHTML = '<p>No data found.</p>';
+                        return;
+                    }
+
+                    // Sort data based on paymentTimestamp from oldest to newest
+                    data.sort((a, b) => a.paymentTimestamp - b.paymentTimestamp);
+
+                    // Create HTML to display the results
+                    let resultHtml = '';
+                    data.forEach(info => {
+                        const type = info.type;
+                        const status = info.status;
+                        const paymentTimestamp = info.paymentTimestamp;
+
+                        // Convert timestamp to a readable time format
+                        const formattedTime = formatTime(paymentTimestamp);
+                        const timeDifference = getTimeDifference(paymentTimestamp);
+
+                        resultHtml += `
+                            <div class="data-item">
+                                <p><strong>Type:</strong> ${type}</p>
+                                <p><strong>Status:</strong> ${status}</p>
+                                <p><strong>PaymentTimestamp:</strong> ${formattedTime}</p>
+                                <p><strong>Dexpaid:</strong> ${timeDifference}</p>
+                            </div>
+                            <hr> <!-- Horizontal line separator -->
+                        `;
+                    });
+
+                    document.getElementById('result').innerHTML = resultHtml;
+                })
+                .catch(error => {
+                    console.error('An error occurred:', error);
+                    document.getElementById('result').innerHTML = '<p>An error occurred while fetching data.</p>';
+                });
+        }
+
+        // Function to format the timestamp into hours:minutes:seconds
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Function to calculate the time difference and display it as "1 min ago", "2 hours ago", etc.
+        function getTimeDifference(timestamp) {
+            const now = new Date();
+            const diffInSeconds = Math.floor((now.getTime() - timestamp) / 1000);
+
+            const days = Math.floor(diffInSeconds / (24 * 3600));
+            const hours = Math.floor((diffInSeconds % (24 * 3600)) / 3600);
+            const minutes = Math.floor((diffInSeconds % 3600) / 60);
+            const seconds = diffInSeconds % 60;
+
+            if (days > 0) {
+                return `${days} day${days > 1 ? 's' : ''} ago`;
+            } else if (hours > 0) {
+                return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            } else if (minutes > 0) {
+                return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+            } else {
+                return `${seconds} sec${seconds > 1 ? 's' : ''} ago`;
+            }
+        }
+
+        // Function to reset input and results
+        function resetData() {
+            document.getElementById('pairInput').value = ''; // Clear the input field
+            document.getElementById('result').innerHTML = ''; // Clear the result display
+        }
+    </script>
+
+</body>
+</html>
